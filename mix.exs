@@ -19,6 +19,7 @@ defmodule MessageStore.MixProject do
       elixir: "~> 1.8",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
+      description: "An useful extensions for eventstore.",
       deps: deps(),
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
@@ -44,10 +45,12 @@ defmodule MessageStore.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ex_doc, "~> 0.21", only: :dev},
+      {:ex_doc, "~> 0.22", only: :dev},
       {:credo, "~> 1.2", only: [:dev, :test]},
       {:excoveralls, "~> 0.13", only: :test},
-      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false}
+      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
+      {:eventstore, "~> 1.0"},
+      {:result, "~> 1.6"}
     ]
   end
 end
