@@ -21,6 +21,8 @@ defmodule MessageStore.MixProject do
       start_permanent: Mix.env() == :prod,
       description: "An useful extensions for eventstore.",
       deps: deps(),
+      source_url: "https://github.com/catchcake/message_store",
+      package: package(),
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
         coveralls: :test,
@@ -51,6 +53,18 @@ defmodule MessageStore.MixProject do
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:eventstore, "~> 1.0"},
       {:result, "~> 1.6"}
+    ]
+  end
+  defp package do
+    [
+      maintainers: [
+        "Jindrich K. Smitka <smitka.j@gmail.com>",
+        "Daniel Bultas <comm3net@gmail.com>"
+      ],
+      licenses: ["BSD-4-Clause"],
+      links: %{
+        "GitHub" => "https://github.com/catchcake/message_store"
+      }
     ]
   end
 end
