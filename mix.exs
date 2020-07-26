@@ -52,9 +52,11 @@ defmodule MessageStore.MixProject do
       {:excoveralls, "~> 0.13", only: :test},
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:eventstore, "~> 1.0"},
+      {:jason, "~> 1.2"},
       {:result, "~> 1.6"}
     ]
   end
+
   defp package do
     [
       maintainers: [
