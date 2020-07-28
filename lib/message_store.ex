@@ -63,4 +63,16 @@ defmodule MessageStore do
     |> Map.put(:causation_id, causation_id)
     |> create_event_data()
   end
+
+  def category(stream_name) when is_binary(stream_name) do
+    stream_name
+    |> String.split("-")
+    |> List.first()
+  end
+
+  def stream_name_to_id(stream_name) when is_binary(stream_name) do
+    stream_name
+    |> String.split("-", parts: 2)
+    |> List.last()
+  end
 end
