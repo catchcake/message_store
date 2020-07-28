@@ -45,7 +45,7 @@ defmodule MessageStore do
     data = Map.fetch!(event, :data)
 
     %EventData{
-      event_type: event |> Map.fetch!(:type) |> Atom.to_string(),
+      event_type: event |> Map.fetch!(:type) |> to_string(),
       data: data,
       metadata: Map.fetch!(event, :metadata),
       causation_id: Map.get(event, :causation_id, data.id),
