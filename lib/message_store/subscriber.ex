@@ -10,6 +10,13 @@ defmodule MessageStore.Subscriber do
 
   # Server
 
+  def child_spec(%{subscriber_name: subscriber_name} = args) do
+    %{
+      id: String.to_atom(subscriber_name),
+      start: {__MODULE__, :start_link, [args]}
+    }
+  end
+
   @doc false
   def start_link(
         %{
