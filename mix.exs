@@ -15,7 +15,7 @@ defmodule MessageStore.MixProject do
           :no_opaque
         ]
       ],
-      version: "0.2.1",
+      version: "0.2.2",
       elixir: "~> 1.8",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
