@@ -23,7 +23,7 @@ defmodule MessageStore.Subscriber do
       when is_binary(stream_name) and is_binary(subscriber_name) and is_atom(handlers) and
              is_atom(message_store) and is_atom(repo) do
     Logger.info(fn -> "Starting #{subscriber_name} subscriber..." end)
-    GenServer.start_link(__MODULE__, settings)
+    GenServer.start_link(__MODULE__, settings, name: String.to_atom(subscriber_name))
   end
 
   @impl true
