@@ -21,14 +21,13 @@ defmodule MessageStore.Subscriber do
   def start_link(
         %{
           message_store: message_store,
-          repo: repo,
           stream_name: stream_name,
           handlers: handlers,
           subscriber_name: subscriber_name
         } = settings
       )
       when is_binary(stream_name) and is_binary(subscriber_name) and is_atom(handlers) and
-             is_atom(message_store) and is_atom(repo) do
+             is_atom(message_store) do
     Logger.info(fn -> "Starting #{subscriber_name} subscriber..." end)
     GenServer.start_link(__MODULE__, settings, name: String.to_atom(subscriber_name))
   end
@@ -67,10 +66,7 @@ defmodule MessageStore.Subscriber do
 
   defp process_message_batch({:ok, [message | rest]}, settings) do
     message
-    |> settings.handlers.handle_message(%{
-      message_store: settings.message_store,
-      repo: settings.repo
-    })
+    |> settings.handlers.handle_message(settings)
     |> Result.and_then(&ack(&1, settings.message_store, message, settings.subscription))
     |> Result.map(fn _ -> rest end)
     |> process_message_batch(settings)
