@@ -75,4 +75,22 @@ defmodule MessageStore do
     |> String.split("-", parts: 2)
     |> List.last()
   end
+
+  @spec expected_version(String.t()) :: Result.t(term(), integer())
+  def expected_version(stream_uuid) when is_binary(stream_uuid) do
+    stream_uuid
+    |> EventStore.stream_forward()
+    |> stream_length()
+  end
+
+  defp stream_length({:error, _} = error) do
+    error
+  end
+
+  defp stream_length(events) do
+    events
+    |> Enum.to_list()
+    |> length()
+    |> Result.ok()
+  end
 end
