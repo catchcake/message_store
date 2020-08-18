@@ -8,7 +8,7 @@
 ```elixir
 def deps do
   [
-    {:message_store, "~> 0.2.3"}
+    {:message_store, "~> 0.3.0"}
   ]
 end
 ```
