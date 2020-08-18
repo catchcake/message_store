@@ -22,6 +22,10 @@ defmodule MessageStore do
         |> Result.catch_error(:stream_not_found, fn _ -> {:ok, []} end)
         |> Result.map(&project.(&1, projection))
       end
+
+      def expected_version(stream_uuid) when is_binary(stream_uuid) do
+        MessageStore.expected_version(__MODULE__, stream_uuid)
+      end
     end
   end
 
@@ -76,10 +80,11 @@ defmodule MessageStore do
     |> List.last()
   end
 
-  @spec expected_version(String.t()) :: Result.t(term(), integer())
-  def expected_version(stream_uuid) when is_binary(stream_uuid) do
+  @spec expected_version(atom(), String.t()) :: Result.t(term(), integer())
+  def expected_version(message_store, stream_uuid)
+      when is_atom(message_store) and is_binary(stream_uuid) do
     stream_uuid
-    |> EventStore.stream_forward()
+    |> message_store.stream_forward()
     |> stream_length()
   end
 
