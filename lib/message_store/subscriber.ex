@@ -1,6 +1,15 @@
 defmodule MessageStore.Subscriber do
   @moduledoc """
   A subscribe server for handling messages.
+
+  ## Options
+
+  * `message_store: module` - it`s messages store module for access event data/streams. Required.
+  * `stream_name: string` - it`s stream name to subscribe for messages. Required.
+  * `handlers: module` - message handlers. Required.
+  * `subscriber_name: string` - unique name. Required.
+  * `origin_stream_name: string` - when is set, filter messages that has in metadata same value in `origin_stream_name` key. Optional.
+  * `address: string` - used for filter messages with same value in metadata `recipient` key. Optional.
   """
   use GenServer
 
@@ -38,7 +47,7 @@ defmodule MessageStore.Subscriber do
       settings.message_store.subscribe_to_all_streams(
         settings.subscriber_name,
         self(),
-        selector: make_selector(settings)
+        selector: &selector(settings, &1)
       )
 
     {:ok, settings}
@@ -93,15 +102,17 @@ defmodule MessageStore.Subscriber do
     end)
   end
 
-  defp make_selector(%{origin_stream_name: origin_stream_name, stream_name: stream_name}) do
-    fn %RecordedEvent{} = message ->
-      stream_uuid_selector(stream_name, message) and
-        origin_stream_name_selector(origin_stream_name, message)
-    end
+  defp selector(settings, %RecordedEvent{} = message) when is_map(settings) do
+    [
+      settings |> Map.fetch!(:stream_name) |> stream_uuid_selector(message),
+      settings |> Map.get(:origin_stream_name, nil) |> origin_stream_name_selector(message),
+      settings |> Map.get(:address, nil) |> recipient_selector(message)
+    ]
+    |> Enum.all?()
   end
 
-  defp make_selector(%{stream_name: stream_name}) do
-    &stream_uuid_selector(stream_name, &1)
+  defp origin_stream_name_selector(nil, _message) do
+    true
   end
 
   defp origin_stream_name_selector(origin_stream_name, %RecordedEvent{
@@ -114,5 +125,16 @@ defmodule MessageStore.Subscriber do
   defp stream_uuid_selector(stream_name, %RecordedEvent{stream_uuid: stream_uuid})
        when is_binary(stream_name) and is_binary(stream_uuid) do
     MessageStore.category(stream_uuid) == stream_name
+  end
+
+  defp recipient_selector(nil, _message) do
+    true
+  end
+
+  defp recipient_selector(address, %RecordedEvent{
+         metadata: %{recipient: recipient}
+       })
+       when is_binary(address) and is_binary(recipient) do
+    address == recipient
   end
 end
