@@ -4,8 +4,8 @@ defmodule MessageStore.Subscriber do
 
   ## Options
 
-  * `message_store: module` - it`s messages store module for access event data/streams. Required.
-  * `stream_name: string` - it`s stream name to subscribe for messages. Required.
+  * `message_store: module` - it's messages store module for access event data/streams. Required.
+  * `stream_name: string` - it's stream name to subscribe for messages. Required.
   * `handlers: module` - message handlers. Required.
   * `subscriber_name: string` - unique name. Required.
   * `origin_stream_name: string` - when is set, filter messages that has in metadata same value in `origin_stream_name` key. Optional.
