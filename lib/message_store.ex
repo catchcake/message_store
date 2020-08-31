@@ -68,6 +68,10 @@ defmodule MessageStore do
     |> create_event_data()
   end
 
+  def category(nil) do
+    ""
+  end
+
   def category(stream_name) when is_binary(stream_name) do
     stream_name
     |> String.split("-")

@@ -115,10 +115,10 @@ defmodule MessageStore.Subscriber do
     true
   end
 
-  defp origin_stream_name_selector(origin_stream_name, %RecordedEvent{
-         metadata: %{origin_stream_name: message_origin_stream_name}
-       })
-       when is_binary(origin_stream_name) and is_binary(message_origin_stream_name) do
+  defp origin_stream_name_selector(origin_stream_name, %RecordedEvent{metadata: metadata})
+       when is_binary(origin_stream_name) and origin_stream_name != "" and is_map(metadata) do
+    message_origin_stream_name = Map.get(metadata, :origin_stream_name)
+
     MessageStore.category(message_origin_stream_name) == origin_stream_name
   end
 
@@ -132,9 +132,11 @@ defmodule MessageStore.Subscriber do
   end
 
   defp recipient_selector(address, %RecordedEvent{
-         metadata: %{recipient: recipient}
+         metadata: metadata
        })
-       when is_binary(address) and is_binary(recipient) do
+       when is_binary(address) and is_map(metadata) do
+    recipient = Map.get(metadata, :recipient)
+
     address == recipient
   end
 end
