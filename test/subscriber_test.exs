@@ -84,6 +84,27 @@ defmodule SubscriberTest do
     GenServer.stop(message_store_pid)
   end
 
+  test "should reject message when origin stream name is missing" do
+    {:ok, message_store_pid} = FakeMessageStore.start_link()
+    Process.unlink(message_store_pid)
+
+    settings = %{
+      message_store: FakeMessageStore,
+      subscriber_name: "subscriber",
+      stream_name: "test",
+      origin_stream_name: "foo"
+    }
+
+    _ = Subscriber.init(settings)
+
+    refute FakeMessageStore.filter(%RecordedEvent{
+             stream_uuid: "test-1234",
+             metadata: %{}
+           })
+
+    GenServer.stop(message_store_pid)
+  end
+
   test "should select only messages for particular stream and specified address" do
     {:ok, message_store_pid} = FakeMessageStore.start_link()
     Process.unlink(message_store_pid)
@@ -105,6 +126,27 @@ defmodule SubscriberTest do
     refute FakeMessageStore.filter(%RecordedEvent{
              stream_uuid: "test-1234",
              metadata: %{recipient: "www.example.com"}
+           })
+
+    GenServer.stop(message_store_pid)
+  end
+
+  test "should reject message when recipient is missing" do
+    {:ok, message_store_pid} = FakeMessageStore.start_link()
+    Process.unlink(message_store_pid)
+
+    settings = %{
+      message_store: FakeMessageStore,
+      subscriber_name: "subscriber",
+      stream_name: "test",
+      address: "foo.bar.org"
+    }
+
+    _ = Subscriber.init(settings)
+
+    refute FakeMessageStore.filter(%RecordedEvent{
+             stream_uuid: "test-1234",
+             metadata: %{}
            })
 
     GenServer.stop(message_store_pid)
