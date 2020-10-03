@@ -3,8 +3,6 @@ defmodule MessageStore do
   A module for interactions with message store
   """
 
-  alias EventStore.{EventData, RecordedEvent}
-
   defmacro __using__(opts) do
     quote bind_quoted: [opts: opts] do
       use EventStore, opts
@@ -43,29 +41,6 @@ defmodule MessageStore do
 
   def to_result({:error, _err} = error, _value) do
     error
-  end
-
-  def create_event_data(event) when is_map(event) do
-    data = Map.fetch!(event, :data)
-
-    %EventData{
-      event_type: event |> Map.fetch!(:type) |> to_string(),
-      data: data,
-      metadata: Map.fetch!(event, :metadata),
-      causation_id: Map.get(event, :causation_id, data.id),
-      correlation_id: Map.get(event, :correlation_id, data.id)
-    }
-  end
-
-  def create_event_data(event, %RecordedEvent{
-        correlation_id: correlation_id,
-        event_id: causation_id
-      })
-      when is_map(event) do
-    event
-    |> Map.put(:correlation_id, correlation_id)
-    |> Map.put(:causation_id, causation_id)
-    |> create_event_data()
   end
 
   def category(nil) do
