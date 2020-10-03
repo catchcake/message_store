@@ -16,4 +16,18 @@ defmodule MessageStore.Message do
       correlation_id: Map.get(event, :correlation_id, data.id)
     }
   end
+
+  def follow(event, recorded_event, [])
+      when is_map(event) and is_map(recorded_event) do
+    build(event)
+  end
+
+  def follow(event, recorded_event, copy)
+      when is_map(event) and is_map(recorded_event) and is_list(copy) do
+    copied_data = Map.take(recorded_event, copy)
+
+    event
+    |> build()
+    |> Map.merge(copied_data)
+  end
 end
