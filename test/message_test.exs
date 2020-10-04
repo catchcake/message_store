@@ -1,15 +1,10 @@
 defmodule MessageTest do
   use ExUnit.Case
 
-  alias EventStore.RecordedEvent
-  alias MessageStore.Message
+  alias MessageStore.{Fixtures, Message}
 
   test "should create event message with type as string" do
-    message = %{
-      type: "RunTest",
-      data: %{id: 1, foo: "bar"},
-      metadata: %{baz: 1}
-    }
+    message = Fixtures.message()
 
     event_data = Message.build(message)
 
@@ -19,11 +14,7 @@ defmodule MessageTest do
   end
 
   test "should create event message with type as atom" do
-    message = %{
-      type: FakeCommand,
-      data: %{id: 1, foo: "bar"},
-      metadata: %{baz: 1}
-    }
+    message = Fixtures.message() |> Map.put(:type, FakeCommand)
 
     event_data = Message.build(message)
 
@@ -32,47 +23,58 @@ defmodule MessageTest do
     assert event_data.metadata == message.metadata
   end
 
-  test "should not copy from recorded event to source event" do
-    recorded_event = %RecordedEvent{
-      correlation_id: "12345",
-      event_id: "67890"
-    }
-
-    message = %{
-      type: "RunTest",
-      data: %{id: 1, foo: "bar"},
-      metadata: %{baz: 1}
-    }
+  test "should not follow any data from recorded event to source event" do
+    recorded_event = Fixtures.recorded_event()
+    message = Fixtures.message()
 
     event_data = Message.follow(message, recorded_event, [])
 
     assert event_data.event_type == message.type
     assert event_data.data == message.data
     assert event_data.metadata == message.metadata
-    refute is_map_key(event_data, :event_id)
-    refute event_data.correlation_id == recorded_event.correlation_id
+    assert event_data.correlation_id == recorded_event.correlation_id
+    assert event_data.causation_id == recorded_event.event_id
   end
 
-  test "should copy from recorded event to source event" do
-    recorded_event = %RecordedEvent{
-      causation_id: "111222",
-      correlation_id: "12345",
-      event_id: "67890"
-    }
+  test "should follow all metadata from recorded event to source event" do
+    data = {:data, [:foo]}
+    metadata = :metadata
+    recorded_event = Fixtures.recorded_event()
+    message = Fixtures.message()
 
-    message = %{
-      type: "RunTest",
-      data: %{id: 1, foo: "bar"},
-      metadata: %{baz: 1}
-    }
-
-    event_data = Message.follow(message, recorded_event, [:correlation_id, :event_id])
+    event_data = Message.follow(message, recorded_event, [metadata, data])
 
     assert event_data.event_type == message.type
-    assert event_data.data == message.data
-    assert event_data.metadata == message.metadata
+    assert event_data.data == expected_result(message, recorded_event, data)
+    assert event_data.metadata == expected_result(message, recorded_event, metadata)
     assert event_data.correlation_id == recorded_event.correlation_id
-    assert event_data.event_id == recorded_event.event_id
-    refute event_data.causation_id == recorded_event.causation_id
+    assert event_data.causation_id == recorded_event.event_id
+  end
+
+  test "should follow some metadata from recorded event to source event" do
+    data = {:data, [:foo]}
+    metadata = {:metadata, [:boo]}
+    recorded_event = Fixtures.recorded_event()
+    message = Fixtures.message()
+
+    event_data = Message.follow(message, recorded_event, [metadata, data])
+
+    assert event_data.event_type == message.type
+    assert event_data.data == expected_result(message, recorded_event, data)
+    assert event_data.metadata == expected_result(message, recorded_event, metadata)
+    assert event_data.correlation_id == recorded_event.correlation_id
+    assert event_data.causation_id == recorded_event.event_id
+  end
+
+  # Private
+
+  defp expected_result(message, recorded_event, {payload, payload_keys}) do
+    re_payload = Map.take(recorded_event[payload], payload_keys)
+
+    Map.merge(message[payload], re_payload)
+  end
+
+  defp expected_result(message, recorded_event, payload) when payload in [:data, :metadata] do
+    Map.merge(message[payload], recorded_event[payload])
   end
 end
