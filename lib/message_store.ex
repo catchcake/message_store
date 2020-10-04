@@ -15,16 +15,22 @@ defmodule MessageStore do
           )
           when is_binary(stream_name) and is_atom(projection) and is_function(project, 2) and
                  is_function(read, 1) do
-        stream_name
-        |> read.()
-        |> Result.catch_error(:stream_not_found, fn _ -> {:ok, []} end)
-        |> Result.map(&project.(&1, projection))
+        MessageStore.fetch(stream_name, projection, read, project)
       end
 
       def expected_version(stream_uuid) when is_binary(stream_uuid) do
         MessageStore.expected_version(__MODULE__, stream_uuid)
       end
     end
+  end
+
+  def fetch(stream_name, projection, read, project)
+      when is_binary(stream_name) and is_atom(projection) and is_function(project, 2) and
+             is_function(read, 1) do
+    stream_name
+    |> read.()
+    |> Result.catch_error(:stream_not_found, fn _ -> {:ok, []} end)
+    |> Result.map(&project.(&1, projection))
   end
 
   def project(messages, projection) when is_list(messages) and is_atom(projection) do
