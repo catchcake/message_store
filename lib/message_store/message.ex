@@ -19,11 +19,16 @@ defmodule MessageStore.Message do
     }
   end
 
-  def follow(event, recorded_event, copy)
-      when is_map(event) and is_map(recorded_event) and is_list(copy) do
-    copy
+  def copy(event, recorded_event, copy_list) do
+    copy_list
     |> Enum.map(&get_data_from(&1, recorded_event))
     |> Enum.reduce(build(event), &update_event(&1, &2))
+  end
+
+  def follow(event, recorded_event, copy_list)
+      when is_map(event) and is_map(recorded_event) and is_list(copy_list) do
+    event
+    |> copy(recorded_event, copy_list)
     |> Map.put(:correlation_id, recorded_event.correlation_id)
     |> Map.put(:causation_id, recorded_event.event_id)
   end
