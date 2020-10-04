@@ -67,8 +67,8 @@ defmodule MessageStoreTest do
   test "stream_name_to_id/1 - should return id from stream name" do
     assert MessageStore.stream_name_to_id("test-123456") == "123456"
     assert MessageStore.stream_name_to_id("test-12-3456") == "12-3456"
-    assert MessageStore.stream_name_to_id("test") == "test"
-    assert MessageStore.stream_name_to_id("test-") == ""
+    assert MessageStore.stream_name_to_id("test") == nil
+    assert MessageStore.stream_name_to_id("test-") == nil
   end
 
   test "expected_version/2 should return result with expected version" do
