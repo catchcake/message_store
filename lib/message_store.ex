@@ -59,10 +59,11 @@ defmodule MessageStore do
     |> List.first()
   end
 
+  @spec stream_name_to_id(String.t()) :: String.t() | nil
   def stream_name_to_id(stream_name) when is_binary(stream_name) do
     stream_name
     |> String.split("-", parts: 2)
-    |> List.last()
+    |> maybe_id()
   end
 
   @spec expected_version(atom(), String.t()) :: Result.t(term(), integer())
@@ -82,5 +83,17 @@ defmodule MessageStore do
     |> Enum.to_list()
     |> length()
     |> Result.ok()
+  end
+
+  defp maybe_id([_, ""]) do
+    nil
+  end
+
+  defp maybe_id([_, id]) do
+    id
+  end
+
+  defp maybe_id(_) do
+    nil
   end
 end
