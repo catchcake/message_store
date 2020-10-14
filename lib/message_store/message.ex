@@ -3,6 +3,8 @@ defmodule MessageStore.Message do
   A module for build, copy and folow event data.
   """
 
+  alias ExMaybe, as: Maybe
+
   defguard is_data_or_metadata(d) when d in [:data, :metadata]
 
   alias EventStore.EventData
@@ -27,7 +29,10 @@ defmodule MessageStore.Message do
       when is_map(event) and is_map(recorded_event) and is_list(copy_list) do
     event
     |> copy(recorded_event, copy_list)
-    |> Map.put(:correlation_id, recorded_event.correlation_id)
+    |> Map.put(
+      :correlation_id,
+      recorded_event.correlation_id |> Maybe.with_default(recorded_event.event_id)
+    )
     |> Map.put(:causation_id, recorded_event.event_id)
   end
 

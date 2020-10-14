@@ -5,13 +5,13 @@ defmodule MessageStore.Fixtures do
 
   alias EventStore.RecordedEvent
 
-  def recorded_event() do
+  def recorded_event(opts \\ []) do
     %RecordedEvent{
-      causation_id: "1",
-      correlation_id: Enum.random(1..10_000) |> to_string(),
-      data: %{foo: "bazinga"},
-      event_id: Enum.random(1..100_000) |> to_string(),
-      metadata: %{baz: 10, boo: 20}
+      event_id: Keyword.get(opts, :event_id, Enum.random(1..100_000) |> to_string()),
+      causation_id: Keyword.get(opts, :causation_id, nil),
+      correlation_id: Keyword.get(opts, :correlation_id, nil),
+      data: Keyword.get(opts, :data, %{foo: "bazinga"}),
+      metadata: Keyword.get(opts, :metadata, %{baz: 10, boo: 20})
     }
   end
 

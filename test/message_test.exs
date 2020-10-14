@@ -120,6 +120,19 @@ defmodule MessageTest do
     assert event_data.causation_id == recorded_event.event_id
   end
 
+  test "should set correlation_id to event_id when source event is root event" do
+    message = Fixtures.message()
+    recorded_event = Fixtures.recorded_event()
+
+    assert is_nil(recorded_event.correlation_id)
+    assert is_nil(recorded_event.causation_id)
+
+    event = Message.follow(message, recorded_event, [])
+
+    assert event.correlation_id == recorded_event.event_id
+    assert event.causation_id == recorded_event.event_id
+  end
+
   # Private
 
   defp expected_result(message, recorded_event, {payload, payload_keys}) do
