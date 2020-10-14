@@ -11,16 +11,32 @@ defmodule MessageTest do
     assert event_data.event_type == message.type
     assert event_data.data == message.data
     assert event_data.metadata == message.metadata
+    assert is_nil(event_data.correlation_id)
+    assert is_nil(event_data.causation_id)
   end
 
   test "should create event message with type as atom" do
-    message = Fixtures.message() |> Map.put(:type, FakeCommand)
+    message = Fixtures.message(type: FakeCommand)
 
     event_data = Message.build(message)
 
     assert event_data.event_type == Atom.to_string(message.type)
     assert event_data.data == message.data
     assert event_data.metadata == message.metadata
+    assert is_nil(event_data.correlation_id)
+    assert is_nil(event_data.causation_id)
+  end
+
+  test "should create event with causation_id and correlation_id" do
+    message = Fixtures.message(correlation_id: "test-1234", causation_id: "test-3490")
+
+    event_data = Message.build(message)
+
+    assert event_data.event_type == message.type
+    assert event_data.data == message.data
+    assert event_data.metadata == message.metadata
+    assert event_data.correlation_id == message.correlation_id
+    assert event_data.causation_id == message.causation_id
   end
 
   test "should not copy any data from recorded event to source event" do

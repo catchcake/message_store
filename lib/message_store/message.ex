@@ -8,14 +8,12 @@ defmodule MessageStore.Message do
   alias EventStore.EventData
 
   def build(event) when is_map(event) do
-    data = Map.fetch!(event, :data)
-
     %EventData{
       event_type: event |> Map.fetch!(:type) |> to_string(),
-      data: data,
+      data: Map.fetch!(event, :data),
       metadata: Map.fetch!(event, :metadata),
-      causation_id: Map.get(event, :causation_id, data.id),
-      correlation_id: Map.get(event, :correlation_id, data.id)
+      causation_id: Map.get(event, :causation_id, nil),
+      correlation_id: Map.get(event, :correlation_id, nil)
     }
   end
 
