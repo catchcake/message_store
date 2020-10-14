@@ -53,7 +53,8 @@ defmodule MessageStore.MixProject do
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:eventstore, "~> 1.0"},
       {:jason, "~> 1.2"},
-      {:result, "~> 1.6"}
+      {:result, "~> 1.6"},
+      {:ex_maybe, "~> 1.1"}
     ]
   end
 
