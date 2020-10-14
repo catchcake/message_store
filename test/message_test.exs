@@ -78,7 +78,7 @@ defmodule MessageTest do
   end
 
   test "should not follow any data from recorded event to source event" do
-    recorded_event = Fixtures.recorded_event()
+    recorded_event = Fixtures.recorded_event(correlation_id: "abcd1234")
     message = Fixtures.message()
 
     event_data = Message.follow(message, recorded_event, [])
@@ -93,7 +93,7 @@ defmodule MessageTest do
   test "should follow all metadata from recorded event to source event" do
     data = {:data, [:foo]}
     metadata = :metadata
-    recorded_event = Fixtures.recorded_event()
+    recorded_event = Fixtures.recorded_event(correlation_id: "09345")
     message = Fixtures.message()
 
     event_data = Message.follow(message, recorded_event, [metadata, data])
@@ -108,7 +108,7 @@ defmodule MessageTest do
   test "should follow some metadata from recorded event to source event" do
     data = {:data, [:foo]}
     metadata = {:metadata, [:boo]}
-    recorded_event = Fixtures.recorded_event()
+    recorded_event = Fixtures.recorded_event(correlation_id: "12345")
     message = Fixtures.message()
 
     event_data = Message.follow(message, recorded_event, [metadata, data])
