@@ -3,6 +3,8 @@ defmodule MessageStore do
   A module for interactions with message store
   """
 
+  alias EventStore.RecordedEvent
+
   defmacro __using__(opts) do
     quote bind_quoted: [opts: opts] do
       use EventStore, opts
@@ -24,6 +26,13 @@ defmodule MessageStore do
     end
   end
 
+  @spec fetch(
+          String.t(),
+          m,
+          (String.t() -> Result.t(reason, [RecordedEvent.t()])),
+          ([RecordedEvent.t()], m -> projection)
+        ) :: Result.t(reason, projection)
+        when m: module(), reason: term(), projection: any()
   def fetch(stream_name, projection, read, project)
       when is_binary(stream_name) and is_atom(projection) and is_function(project, 2) and
              is_function(read, 1) do
@@ -33,6 +42,7 @@ defmodule MessageStore do
     |> Result.map(&project.(&1, projection))
   end
 
+  @spec project([RecordedEvent.t()], module()) :: any()
   def project(messages, projection) when is_list(messages) and is_atom(projection) do
     Enum.reduce(
       messages,
@@ -41,6 +51,8 @@ defmodule MessageStore do
     )
   end
 
+  @spec to_result(:ok | {:error, err}, value) :: Result.t(err, value)
+        when err: any(), value: any()
   def to_result(:ok, value) do
     {:ok, value}
   end
@@ -49,6 +61,7 @@ defmodule MessageStore do
     error
   end
 
+  @spec category(String.t() | nil) :: String.t()
   def category(nil) do
     ""
   end
