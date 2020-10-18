@@ -8,10 +8,10 @@ defmodule MessageStore.ProjectionBehaviour do
   @doc """
   The projection initial state.
   """
-  @callback init() :: map()
+  @callback init() :: any()
 
   @doc """
   A message handler
   """
-  @callback handle_message(RecordedEvent.t(), map()) :: map()
+  @callback handle_message(RecordedEvent.t(), state) :: state when state: any()
 end
