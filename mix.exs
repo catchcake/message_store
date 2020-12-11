@@ -51,7 +51,7 @@ defmodule MessageStore.MixProject do
       {:credo, "~> 1.2", only: [:dev, :test]},
       {:excoveralls, "~> 0.13", only: :test},
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
-      {:eventstore, "~> 1.0"},
+      {:eventstore, "~> 1.2"},
       {:jason, "~> 1.2"},
       {:result, "~> 1.6"},
       {:ex_maybe, "~> 1.1"}
