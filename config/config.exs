@@ -25,4 +25,5 @@ use Mix.Config
 # config(:message_store, event_stores: [MessageStore])
 # Example per-environment config:
 #
-#     import_config("#{Mix.env}.exs")
+
+import_config("#{Mix.env()}.exs")
