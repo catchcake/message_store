@@ -5,39 +5,59 @@ defmodule MessageStore do
 
   alias EventStore.RecordedEvent
 
+  defguard is_conn(conn) when is_atom(conn) or is_pid(conn)
+
   defmacro __using__(opts) do
     quote bind_quoted: [opts: opts] do
       use EventStore, opts
 
-      def fetch(
-            stream_name,
-            projection,
-            read \\ &read_stream_forward/1,
-            project \\ &MessageStore.project/2
-          )
-          when is_binary(stream_name) and is_atom(projection) and is_function(project, 2) and
-                 is_function(read, 1) do
-        MessageStore.fetch(stream_name, projection, read, project)
+      def fetch(stream_name, projection, opts \\ [])
+          when is_binary(stream_name) and is_atom(projection) and is_list(opts) do
+        {conn, opts} = parse_fetch_options(opts)
+
+        MessageStore.fetch(conn, stream_name, projection, opts)
       end
 
       def expected_version(stream_uuid) when is_binary(stream_uuid) do
         MessageStore.expected_version(__MODULE__, stream_uuid)
       end
+
+      defp parse_fetch_options(opts) do
+        opts
+        |> parse_opts()
+        |> put_read_function(opts)
+        |> put_project_function(opts)
+      end
+
+      defp put_read_function({conn, base}, opts) do
+        read = Keyword.get(opts, :read, &MessageStore.Stream.read/3)
+
+        {conn, Keyword.put(base, :read, read)}
+      end
+
+      defp put_project_function({conn, base}, opts) do
+        project = Keyword.get(opts, :project, &MessageStore.project/2)
+
+        {conn, Keyword.put(base, :project, project)}
+      end
     end
   end
 
   @spec fetch(
+          conn,
           String.t(),
           m,
-          (String.t() -> Result.t(reason, [RecordedEvent.t()])),
-          ([RecordedEvent.t()], m -> projection)
+          read: (conn, String.t(), list() -> Result.t(reason, [RecordedEvent.t()])),
+          project: ([RecordedEvent.t()], m -> projection)
         ) :: Result.t(reason, projection)
-        when m: module(), reason: term(), projection: any()
-  def fetch(stream_name, projection, read, project)
-      when is_binary(stream_name) and is_atom(projection) and is_function(project, 2) and
-             is_function(read, 1) do
-    stream_name
-    |> read.()
+        when conn: module(), m: module(), reason: term(), projection: any()
+  def fetch(conn, stream_name, projection, opts)
+      when is_conn(conn) and is_binary(stream_name) and is_atom(projection) and is_list(opts) do
+    {read, opts} = Keyword.pop!(opts, :read)
+    {project, opts} = Keyword.pop!(opts, :project)
+
+    conn
+    |> read.(stream_name, opts)
     |> Result.catch_error(:stream_not_found, fn _ -> {:ok, []} end)
     |> Result.map(&project.(&1, projection))
   end
