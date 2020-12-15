@@ -3,11 +3,15 @@ defmodule MessageStore.Stream do
   A stream operations.
   """
 
-  def read(stream_name) do
-    # XXX: for testing purposes
+  import MessageStore, only: [is_conn: 1]
+
+  def read(conn, stream_name, opts \\ [])
+      when is_conn(conn) and is_binary(stream_name) and is_list(opts) do
+    schema = Keyword.get(opts, :schema, "public")
+
     Postgrex.query(
-      Core.MessageStore.Postgrex,
-      query_read_stream("eventstore"),
+      conn,
+      query_read_stream(schema),
       [stream_name]
     )
   end
@@ -19,11 +23,20 @@ defmodule MessageStore.Stream do
       from #{schema}.stream_events join #{schema}.streams using(stream_id)
       where #{schema}.streams.stream_uuid = $1
     )
-    select *
+    select se.stream_version,
+           e.event_id,
+           se.original_stream_version,
+           e.event_type,
+           e.correlation_id,
+           e.causation_id,
+           e.data,
+           e.metadata,
+           e.created_at
     from event_ids
-      join #{schema}.stream_events using(event_id)
-      join #{schema}.events using(event_id)
-    where stream_id=0;
+      join #{schema}.stream_events as se using(event_id)
+      join #{schema}.events as e using(event_id)
+    where se.stream_id=0
+    order by se.stream_version asc;
     """
   end
 end
