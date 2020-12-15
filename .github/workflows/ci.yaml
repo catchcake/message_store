@@ -3,15 +3,34 @@ name: Continuous Integration
 on: push
 
 env:
+  # .envs
+  EVENTSTORE_URL: "postgres://postgres:postgres@localhost/message_store"
   # OS: ubuntu-latest
-  OTP_VERSION: 23
-  ELIXIR_VERSION: 1.10.4
+  OTP_VERSION: 23.1
+  ELIXIR_VERSION: 1.11.2
   MIX_ENV: test
+  DTB_NAME: message_store
+  DTB_USER: postgres
+  DTB_PASSWORD: postgres
 
 jobs:
   test:
     name: Run on ubuntu-latest
     runs-on: ubuntu-latest
+
+    services:
+      db:
+        image: postgres:12
+        env:
+          POSTGRES_USER: ${{ env.DTB_USER }}
+          POSTGRES_PASSWORD: ${{ env.DTB_PASSWORD }}
+          POSTGRES_DB: ${{ env.DTB_NAME }}
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
     steps:
       - name: checkout code into workspace directory
