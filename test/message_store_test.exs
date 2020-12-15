@@ -38,9 +38,14 @@ defmodule MessageStoreTest do
   end
 
   test "fetch/4 should fetch messages from store and project" do
-    {:ok, %{}} = MessageStore.fetch("test-12345", TestProjection, &read/1, &project/2)
+    opts = [
+      read: &read/3,
+      project: &project/2
+    ]
 
-    assert_received {:read, "test-12345"}
+    {:ok, %{}} = MessageStore.fetch(:conn, "test-12345", TestProjection, opts)
+
+    assert_received {:read, :conn, "test-12345"}
     assert_received {:project, [], TestProjection}
   end
 
@@ -85,8 +90,8 @@ defmodule MessageStoreTest do
     assert result == {:error, :reason}
   end
 
-  defp read(stream_name) do
-    send(self(), {:read, stream_name})
+  defp read(conn, stream_name, []) do
+    send(self(), {:read, conn, stream_name})
 
     {:ok, []}
   end
