@@ -25,6 +25,7 @@ defmodule MessageStore.Stream do
     )
     select se.stream_version,
            e.event_id,
+           $1 as stream_uuid,
            se.original_stream_version,
            e.event_type,
            e.correlation_id,
