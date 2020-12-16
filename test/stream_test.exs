@@ -7,7 +7,7 @@ defmodule StreamTest do
   alias MessageStore.{Message, Stream}
 
   setup do
-    {:ok, message_store} = TestMessageStore.start_link()
+    {:ok, _message_store} = TestMessageStore.start_link()
 
     opts = EventStore.Config.lookup(TestMessageStore)
     conn = Keyword.fetch!(opts, :conn)
