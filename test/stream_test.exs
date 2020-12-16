@@ -1,19 +1,10 @@
 defmodule StreamTest do
   @moduledoc false
 
-  use ExUnit.Case
+  use MessageStoreCase
   doctest MessageStore.Stream
 
   alias MessageStore.{Message, Stream}
-
-  setup do
-    {:ok, _message_store} = TestMessageStore.start_link()
-
-    opts = EventStore.Config.lookup(TestMessageStore)
-    conn = Keyword.fetch!(opts, :conn)
-
-    {:ok, conn: conn, opts: opts}
-  end
 
   test "read/3 should return recorded events with global position", %{conn: conn, opts: opts} do
     streams = random_streams(3)
