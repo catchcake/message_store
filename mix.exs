@@ -29,7 +29,8 @@ defmodule MessageStore.MixProject do
         "coveralls.detail": :test,
         "coveralls.post": :test,
         "coveralls.html": :test
-      ]
+      ],
+      aliases: aliases()
     ]
   end
 
@@ -68,6 +69,14 @@ defmodule MessageStore.MixProject do
       links: %{
         "GitHub" => "https://github.com/catchcake/message_store"
       }
+    ]
+  end
+
+  defp aliases() do
+    [
+      "event_store.setup": ["event_store.create", "event_store.init", "event_store.migrate"],
+      "event_store.reset": ["event_store.drop", "event_store.setup"],
+      test: ["event_store.drop", "event_store.setup", "test"]
     ]
   end
 end
