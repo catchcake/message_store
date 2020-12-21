@@ -20,8 +20,13 @@ defmodule SubscriberTest do
     end
 
     @impl true
-    def handle_call({:subscribe, name, selector}, _from, state) do
-      {:reply, {:ok, nil}, state |> Map.put(:name, name) |> Map.put(:selector, selector)}
+    def handle_call({:subscribe, subscriber_name, opts}, _from, state) do
+      new_state =
+        opts
+        |> Map.new()
+        |> Map.put(:subscriber_name, subscriber_name)
+
+      {:reply, {:ok, nil}, Map.merge(state, new_state)}
     end
 
     @impl true
@@ -29,14 +34,21 @@ defmodule SubscriberTest do
       {:reply, selector.(message), state}
     end
 
-    def subscribe_to_all_streams(name, _pid, opts) do
-      selector = Keyword.fetch!(opts, :selector)
+    @impl true
+    def handle_call(:state, _from, state) do
+      {:reply, state, state}
+    end
 
-      GenServer.call(__MODULE__, {:subscribe, name, selector})
+    def subscribe_to_all_streams(subscriber_name, _pid, opts) do
+      GenServer.call(__MODULE__, {:subscribe, subscriber_name, opts})
     end
 
     def filter(message) do
       GenServer.call(__MODULE__, {:filter, message})
+    end
+
+    def state() do
+      GenServer.call(__MODULE__, :state)
     end
   end
 
@@ -148,6 +160,26 @@ defmodule SubscriberTest do
              stream_uuid: "test-1234",
              metadata: %{}
            })
+
+    GenServer.stop(message_store_pid)
+  end
+
+  test "should rename event store name to name for subscribe to named eventstore" do
+    {:ok, message_store_pid} = FakeMessageStore.start_link()
+    Process.unlink(message_store_pid)
+
+    settings = %{
+      message_store: FakeMessageStore,
+      subscriber_name: "subscriber",
+      stream_name: "test",
+      event_store_name: FooStore
+    }
+
+    _ = Subscriber.init(settings)
+
+    state = FakeMessageStore.state()
+
+    assert state.name == FooStore
 
     GenServer.stop(message_store_pid)
   end

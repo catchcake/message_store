@@ -10,6 +10,31 @@ defmodule MessageStore.Subscriber do
   * `subscriber_name: string` - unique name. Required.
   * `origin_stream_name: string` - when is set, filter messages that has in metadata same value in `origin_stream_name` key. Optional.
   * `address: string` - used for filter messages with same value in metadata `recipient` key. Optional.
+  * `event_store_name: string` the name of the event store if provided to `EventStore.start_link/1`.
+  * `start_from: atom` is a pointer to the first event to receive.
+    It must be one of:
+      - `:origin` for all events from the start of the stream (default).
+      - `:current` for any new events appended to the stream after the
+        subscription has been created.
+      - any positive integer for a stream version to receive events after.
+  * `buffer_size: integer` limits how many in-flight events will be sent to the
+    subscriber process before acknowledgement of successful processing. This
+    limits the number of messages sent to the subscriber and stops their
+    message queue from getting filled with events. Defaults to one in-flight
+    event.
+  * `transient: boolean` is an optional boolean flag to create a transient subscription.
+    By default this is set to `false`. If you want to create a transient
+    subscription set this flag to true. Your subscription will not be
+    persisted, so if the subscription is restarted, you will receive the events
+    again starting from `start_from`.
+    An example usage are short lived event handlers that keep their state in
+    memory but still want to have the guarantee to have received all events.
+    It's possible to create a persistent subscription with some name,
+    stop it and later create a transient subscription with the same name. The
+    transient subscription will now receive all events starting from `start_from`.
+    If you later stop this `transient` subscription and start a persistent
+    subscription again with the same name, you will receive the events again
+    as if the transient subscription never existed.
   """
   use GenServer
 
@@ -47,7 +72,7 @@ defmodule MessageStore.Subscriber do
       settings.message_store.subscribe_to_all_streams(
         settings.subscriber_name,
         self(),
-        selector: &selector(settings, &1)
+        eventstore_opts(settings)
       )
 
     {:ok, settings}
@@ -139,4 +164,26 @@ defmodule MessageStore.Subscriber do
 
     address == recipient
   end
+
+  defp eventstore_opts(settings) when is_map(settings) do
+    settings
+    |> Map.take([
+      :event_store_name,
+      :start_from,
+      :buffer_size,
+      :transient
+    ])
+    |> rename_key(:event_store_name, :name)
+    |> Keyword.new()
+    |> Keyword.put(:selector, &selector(settings, &1))
+  end
+
+  defp rename_key(map, current_key, new_key) when is_map(map) do
+    map
+    |> Map.pop(current_key)
+    |> put_value_with_new_key(new_key)
+  end
+
+  defp put_value_with_new_key({nil, map}, _new_key), do: map
+  defp put_value_with_new_key({value, map}, new_key), do: Map.put(map, new_key, value)
 end
