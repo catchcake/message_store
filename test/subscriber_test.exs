@@ -183,4 +183,70 @@ defmodule SubscriberTest do
 
     GenServer.stop(message_store_pid)
   end
+
+  describe "Messages processing" do
+    defmodule TestHandler do
+      @moduledoc false
+
+      use MessageStore.MessageHandler
+
+      def handle_message(%RecordedEvent{event_type: "Test"} = message, _settings) do
+        send(self(), {:message_handled, message})
+
+        {:ok, message}
+      end
+    end
+
+    defmodule TestMessageStore do
+      @moduledoc false
+
+      def ack(subscription, arg2) do
+        send(self(), {:ack, subscription, arg2})
+
+        :ok
+      end
+    end
+
+    test "should succeed" do
+      message1 =
+        recorded_event(stream_uuid: "test-123", data: %{}, event_type: "Test", event_number: 1)
+
+      message2 =
+        recorded_event(stream_uuid: "test-123", data: %{}, event_type: "Test", event_number: 2)
+
+      messages = [message1, message2]
+
+      settings = %{
+        handlers: TestHandler,
+        message_store: TestMessageStore,
+        subscription: "PID",
+        subscriber_name: "components:test"
+      }
+
+      result = Subscriber.handle_info({:events, messages}, settings)
+
+      assert result == {:noreply, settings}
+
+      assert_received {:ack, "PID", ^messages}
+      assert_received {:message_handled, ^message1}
+      assert_received {:message_handled, ^message2}
+    end
+  end
+
+  defp recorded_event(defaults) do
+    event_number = Keyword.get(defaults, :event_number, :rand.uniform(1000))
+
+    %RecordedEvent{
+      causation_id: Keyword.get(defaults, :causation_id),
+      correlation_id: Keyword.get(defaults, :correlation_id),
+      created_at: Keyword.get(defaults, :created_at, DateTime.utc_now()),
+      data: Keyword.fetch!(defaults, :data),
+      event_id: Keyword.get(defaults, :event_id, UUID.uuid4()),
+      event_number: event_number,
+      event_type: Keyword.fetch!(defaults, :event_type),
+      metadata: Keyword.get(defaults, :metadata),
+      stream_uuid: Keyword.fetch!(defaults, :stream_uuid),
+      stream_version: Keyword.get(defaults, :stream_version, event_number)
+    }
+  end
 end

@@ -87,44 +87,93 @@ defmodule MessageStore.Subscriber do
 
   @impl true
   def handle_info({:events, messages}, settings) do
-    messages
-    |> Result.ok()
-    |> process_message_batch(settings)
-    |> Result.map(fn _ -> Enum.count(messages) end)
-    |> log(settings)
+    messages_count = Enum.count(messages)
 
-    {:noreply, settings}
+    messages
+    |> process_message_batch(settings)
+    |> ack_messages(settings)
+    |> log_processed_messages(messages_count, settings)
+    |> exit_or_continue(messages_count, settings)
   end
 
   # Private
 
-  defp process_message_batch({:ok, [message | rest]}, settings) do
+  defp process_message_batch(messages, settings) do
+    messages
+    |> Enum.reduce_while([], &process_message(&1, &2, settings))
+    |> Enum.reverse()
+  end
+
+  defp process_message(message, acc, settings) do
     message
     |> settings.handlers.handle_message(settings)
-    |> Result.and_then(&ack(&1, settings.message_store, message, settings.subscription))
-    |> Result.map(fn _ -> rest end)
-    |> process_message_batch(settings)
+    |> log_error(settings)
+    |> halt_or_continue(message, acc)
   end
 
-  defp process_message_batch(result, _state) do
-    result
+  defp halt_or_continue({:error, _}, _message, acc) do
+    {:halt, acc}
   end
 
-  defp ack(value, message_store, message, subscription) do
-    case message_store.ack(subscription, message) do
-      :ok -> {:ok, value}
+  defp halt_or_continue({:ok, _}, message, acc) do
+    {:cont, [message | acc]}
+  end
+
+  defp ack_messages([], _settings) do
+    {:ok, 0}
+  end
+
+  defp ack_messages(messages, settings) do
+    case settings.message_store.ack(settings.subscription, messages) do
+      :ok -> {:ok, Enum.count(messages)}
       error -> error
     end
   end
 
-  defp log({:ok, count}, settings) do
-    Logger.debug(fn -> "Subscriber #{settings.subscriber_name} processed #{count} messages..." end)
+  defp exit_or_continue({:ok, count}, original_count, settings) when count == original_count do
+    {:noreply, settings}
   end
 
-  defp log({:error, err}, settings) do
+  defp exit_or_continue({:ok, _count}, _original_count, settings) do
+    {:stop, :error_in_message_processing, settings}
+  end
+
+  defp exit_or_continue({:error, _msg}, _original_count, settings) do
+    Logger.info(fn -> "Subscriber #{settings.subscriber_name} shutting down..." end)
+    {:stop, :shutdown, settings}
+  end
+
+  defp log_error({:error, err} = result, settings) do
     Logger.error(fn ->
       "Subscriber #{settings.subscriber_name} ended with #{inspect(err)} error..."
     end)
+
+    result
+  end
+
+  defp log_error(result, _settings) do
+    result
+  end
+
+  defp log_processed_messages({:ok, count} = result, original_count, settings)
+       when count == original_count do
+    Logger.debug(fn -> "Subscriber #{settings.subscriber_name} processed #{count} messages..." end)
+
+    result
+  end
+
+  defp log_processed_messages({:ok, count} = result, original_count, settings) do
+    Logger.error(fn ->
+      "Subscriber #{settings.subscriber_name} processed #{count} messages instead #{
+        original_count
+      } messages."
+    end)
+
+    result
+  end
+
+  defp log_processed_messages(result, _original_count, settings) do
+    log_error(result, settings)
   end
 
   defp selector(settings, %RecordedEvent{} = message) when is_map(settings) do
