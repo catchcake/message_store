@@ -197,6 +197,18 @@ defmodule SubscriberTest do
       end
     end
 
+    defmodule ErrorTestHandler do
+      @moduledoc false
+
+      use MessageStore.MessageHandler
+
+      def handle_message(%RecordedEvent{event_type: "Test"} = message, _settings) do
+        send(self(), {:message_handled, message})
+
+        {:error, "ERROR"}
+      end
+    end
+
     defmodule TestMessageStore do
       @moduledoc false
 
@@ -204,6 +216,16 @@ defmodule SubscriberTest do
         send(self(), {:ack, subscription, arg2})
 
         :ok
+      end
+    end
+
+    defmodule ErrorTestMessageStore do
+      @moduledoc false
+
+      def ack(subscription, arg2) do
+        send(self(), {:ack, subscription, arg2})
+
+        {:error, "ERROR"}
       end
     end
 
@@ -226,6 +248,56 @@ defmodule SubscriberTest do
       result = Subscriber.handle_info({:events, messages}, settings)
 
       assert result == {:noreply, settings}
+
+      assert_received {:ack, "PID", ^messages}
+      assert_received {:message_handled, ^message1}
+      assert_received {:message_handled, ^message2}
+    end
+
+    test "should exit if handler return error" do
+      message1 =
+        recorded_event(stream_uuid: "test-123", data: %{}, event_type: "Test", event_number: 1)
+
+      message2 =
+        recorded_event(stream_uuid: "test-123", data: %{}, event_type: "Test", event_number: 2)
+
+      messages = [message1, message2]
+
+      settings = %{
+        handlers: ErrorTestHandler,
+        message_store: TestMessageStore,
+        subscription: "PID",
+        subscriber_name: "components:test"
+      }
+
+      result = Subscriber.handle_info({:events, messages}, settings)
+
+      assert result == {:stop, :error_in_message_processing, settings}
+
+      refute_received {:ack, "PID", ^messages}
+      assert_received {:message_handled, ^message1}
+      refute_received {:message_handled, ^message2}
+    end
+
+    test "should shutdown if ack failed" do
+      message1 =
+        recorded_event(stream_uuid: "test-123", data: %{}, event_type: "Test", event_number: 1)
+
+      message2 =
+        recorded_event(stream_uuid: "test-123", data: %{}, event_type: "Test", event_number: 2)
+
+      messages = [message1, message2]
+
+      settings = %{
+        handlers: TestHandler,
+        message_store: ErrorTestMessageStore,
+        subscription: "PID",
+        subscriber_name: "components:test"
+      }
+
+      result = Subscriber.handle_info({:events, messages}, settings)
+
+      assert result == {:stop, :shutdown, settings}
 
       assert_received {:ack, "PID", ^messages}
       assert_received {:message_handled, ^message1}
