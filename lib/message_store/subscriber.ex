@@ -47,7 +47,8 @@ defmodule MessageStore.Subscriber do
   def child_spec(%{subscriber_name: subscriber_name} = args) do
     %{
       id: String.to_atom(subscriber_name),
-      start: {__MODULE__, :start_link, [args]}
+      start: {__MODULE__, :start_link, [args]},
+      restart: :transient
     }
   end
 
