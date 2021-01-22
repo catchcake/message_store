@@ -6,6 +6,8 @@ defmodule SubscriberTest do
 
   alias MessageStore.Subscriber
 
+  alias MessageStore.Fixtures
+
   defmodule FakeMessageStore do
     use GenServer
 
@@ -231,10 +233,20 @@ defmodule SubscriberTest do
 
     test "should succeed" do
       message1 =
-        recorded_event(stream_uuid: "test-123", data: %{}, event_type: "Test", event_number: 1)
+        Fixtures.recorded_event(
+          stream_uuid: "test-123",
+          data: %{},
+          event_type: "Test",
+          event_number: 1
+        )
 
       message2 =
-        recorded_event(stream_uuid: "test-123", data: %{}, event_type: "Test", event_number: 2)
+        Fixtures.recorded_event(
+          stream_uuid: "test-123",
+          data: %{},
+          event_type: "Test",
+          event_number: 2
+        )
 
       messages = [message1, message2]
 
@@ -256,10 +268,20 @@ defmodule SubscriberTest do
 
     test "should exit if handler return error" do
       message1 =
-        recorded_event(stream_uuid: "test-123", data: %{}, event_type: "Test", event_number: 1)
+        Fixtures.recorded_event(
+          stream_uuid: "test-123",
+          data: %{},
+          event_type: "Test",
+          event_number: 1
+        )
 
       message2 =
-        recorded_event(stream_uuid: "test-123", data: %{}, event_type: "Test", event_number: 2)
+        Fixtures.recorded_event(
+          stream_uuid: "test-123",
+          data: %{},
+          event_type: "Test",
+          event_number: 2
+        )
 
       messages = [message1, message2]
 
@@ -281,10 +303,20 @@ defmodule SubscriberTest do
 
     test "should shutdown if ack failed" do
       message1 =
-        recorded_event(stream_uuid: "test-123", data: %{}, event_type: "Test", event_number: 1)
+        Fixtures.recorded_event(
+          stream_uuid: "test-123",
+          data: %{},
+          event_type: "Test",
+          event_number: 1
+        )
 
       message2 =
-        recorded_event(stream_uuid: "test-123", data: %{}, event_type: "Test", event_number: 2)
+        Fixtures.recorded_event(
+          stream_uuid: "test-123",
+          data: %{},
+          event_type: "Test",
+          event_number: 2
+        )
 
       messages = [message1, message2]
 
@@ -303,22 +335,5 @@ defmodule SubscriberTest do
       assert_received {:message_handled, ^message1}
       assert_received {:message_handled, ^message2}
     end
-  end
-
-  defp recorded_event(defaults) do
-    event_number = Keyword.get(defaults, :event_number, :rand.uniform(1000))
-
-    %RecordedEvent{
-      causation_id: Keyword.get(defaults, :causation_id),
-      correlation_id: Keyword.get(defaults, :correlation_id),
-      created_at: Keyword.get(defaults, :created_at, DateTime.utc_now()),
-      data: Keyword.fetch!(defaults, :data),
-      event_id: Keyword.get(defaults, :event_id, UUID.uuid4()),
-      event_number: event_number,
-      event_type: Keyword.fetch!(defaults, :event_type),
-      metadata: Keyword.get(defaults, :metadata),
-      stream_uuid: Keyword.fetch!(defaults, :stream_uuid),
-      stream_version: Keyword.get(defaults, :stream_version, event_number)
-    }
   end
 end

@@ -40,7 +40,7 @@ defmodule MessageTest do
   end
 
   test "should not copy any data from recorded event to source event" do
-    recorded_event = Fixtures.recorded_event()
+    recorded_event = Fixtures.recorded_event(event_type: "Test", stream_uuid: "test-123")
     message = Fixtures.message()
 
     event_data = Message.copy(message, recorded_event, [])
@@ -53,7 +53,14 @@ defmodule MessageTest do
   test "should copy all metadata from recorded event to source event" do
     data = {:data, [:foo]}
     metadata = :metadata
-    recorded_event = Fixtures.recorded_event()
+
+    recorded_event =
+      Fixtures.recorded_event(
+        event_type: "Test",
+        stream_uuid: "test-123",
+        metadata: %{baz: "bar"}
+      )
+
     message = Fixtures.message()
 
     event_data = Message.copy(message, recorded_event, [metadata, data])
@@ -66,7 +73,14 @@ defmodule MessageTest do
   test "should copy some metadata from recorded event to source event" do
     data = {:data, [:foo]}
     metadata = {:metadata, [:boo]}
-    recorded_event = Fixtures.recorded_event()
+
+    recorded_event =
+      Fixtures.recorded_event(
+        event_type: "Test",
+        stream_uuid: "test-123",
+        metadata: %{bar: "baz", boo: "bam"}
+      )
+
     message = Fixtures.message()
 
     event_data = Message.copy(message, recorded_event, [:correlation_id, metadata, data])
@@ -78,7 +92,13 @@ defmodule MessageTest do
   end
 
   test "should not follow any data from recorded event to source event" do
-    recorded_event = Fixtures.recorded_event(correlation_id: "abcd1234")
+    recorded_event =
+      Fixtures.recorded_event(
+        correlation_id: "abcd1234",
+        event_type: "Test",
+        stream_uuid: "test-123"
+      )
+
     message = Fixtures.message()
 
     event_data = Message.follow(message, recorded_event, [])
@@ -93,7 +113,15 @@ defmodule MessageTest do
   test "should follow all metadata from recorded event to source event" do
     data = {:data, [:foo]}
     metadata = :metadata
-    recorded_event = Fixtures.recorded_event(correlation_id: "09345")
+
+    recorded_event =
+      Fixtures.recorded_event(
+        event_type: "Test",
+        correlation_id: "09345",
+        stream_uuid: "test-123",
+        metadata: %{bar: "baz", boo: "bam"}
+      )
+
     message = Fixtures.message()
 
     event_data = Message.follow(message, recorded_event, [metadata, data])
@@ -108,7 +136,15 @@ defmodule MessageTest do
   test "should follow some metadata from recorded event to source event" do
     data = {:data, [:foo]}
     metadata = {:metadata, [:boo]}
-    recorded_event = Fixtures.recorded_event(correlation_id: "12345")
+
+    recorded_event =
+      Fixtures.recorded_event(
+        correlation_id: "12345",
+        stream_uuid: "test-123",
+        event_type: "Test",
+        metadata: %{bar: "baz", boo: "bam"}
+      )
+
     message = Fixtures.message()
 
     event_data = Message.follow(message, recorded_event, [metadata, data])
@@ -122,7 +158,7 @@ defmodule MessageTest do
 
   test "should set correlation_id to event_id when source event is root event" do
     message = Fixtures.message()
-    recorded_event = Fixtures.recorded_event()
+    recorded_event = Fixtures.recorded_event(event_type: "Test", stream_uuid: "test-123")
 
     assert is_nil(recorded_event.correlation_id)
     assert is_nil(recorded_event.causation_id)
