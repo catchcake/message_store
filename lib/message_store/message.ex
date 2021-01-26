@@ -11,6 +11,7 @@ defmodule MessageStore.Message do
 
   def build(event) when is_map(event) do
     %EventData{
+      event_id: Map.get(event, :event_id),
       event_type: event |> Map.fetch!(:type) |> to_string(),
       data: Map.fetch!(event, :data),
       metadata: Map.fetch!(event, :metadata),
