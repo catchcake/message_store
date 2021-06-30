@@ -3,6 +3,61 @@ defmodule MessageTest do
 
   alias MessageStore.{Fixtures, Message}
 
+  defmodule FakeMessageStore do
+    @moduledoc false
+
+    def append_to_stream(stream_name, version, messages) do
+      send(self(), {:called_append_to_stream, {stream_name, version, messages}})
+
+      :ok
+    end
+  end
+
+  test "should create event type from module name" do
+    assert Message.type_from_module(Foo.Bar.Baz) == "Baz"
+  end
+
+  test "should raise error when atom is nil, true or false" do
+    assert_raise FunctionClauseError, fn -> Message.type_from_module(nil) end
+    assert_raise FunctionClauseError, fn -> Message.type_from_module(true) end
+    assert_raise FunctionClauseError, fn -> Message.type_from_module(false) end
+  end
+
+  test "write/4 - should call append_to_stream" do
+    stream_name = "test-123"
+    messages = [%{}]
+
+    assert Message.write(FakeMessageStore, stream_name, messages) == {:ok, stream_name}
+
+    assert_receive {:called_append_to_stream, _}
+  end
+
+  test "write/4 - should prepare message list from one message" do
+    stream_name = "test-123"
+
+    assert Message.write(FakeMessageStore, stream_name, %{}) == {:ok, stream_name}
+
+    assert_receive {:called_append_to_stream, {_, _, [%{}]}}
+  end
+
+  test "write/4 - should fill version parameter when is omitted" do
+    stream_name = "test-123"
+    messages = [%{}]
+
+    assert Message.write(FakeMessageStore, stream_name, messages) == {:ok, stream_name}
+
+    assert_receive {:called_append_to_stream, {_, :any_version, _}}
+  end
+
+  test "write/4 - should raise error when wrong version is given" do
+    stream_name = "test-123"
+    messages = [%{}]
+
+    assert_raise FunctionClauseError, fn ->
+      Message.write(FakeMessageStore, stream_name, messages, -1)
+    end
+  end
+
   test "should create event message with type as string" do
     message = Fixtures.message()
 
