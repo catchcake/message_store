@@ -3,11 +3,16 @@ defmodule MessageStore.Message do
   A module for build, copy and folow event data.
   """
 
+  alias EventStore.EventData
   alias ExMaybe, as: Maybe
 
-  defguard is_data_or_metadata(d) when d in [:data, :metadata]
+  @type message() :: EventData.t()
+  @type stream_name() :: String.t()
+  @type version() :: EventStore.expected_version()
 
-  alias EventStore.EventData
+  defguard is_data_or_metadata(d) when d in [:data, :metadata]
+  defguard is_version(version) when is_atom(version) or (is_integer(version) and version >= 0)
+  defguard is_module_name(module) when is_atom(module) and module not in [nil, true, false]
 
   def build(event) when is_map(event) do
     %EventData{
@@ -36,6 +41,31 @@ defmodule MessageStore.Message do
     )
     |> Map.put(:causation_id, recorded_event.event_id)
   end
+
+  @spec type_from_module(module()) :: String.t()
+  def type_from_module(module) when is_module_name(module) do
+    module
+    |> Atom.to_string()
+    |> String.split(".")
+    |> List.last()
+  end
+
+  @spec write(module(), stream_name(), message() | [message()], version()) ::
+          Result.t(any(), any())
+  def write(message_store, stream_name, message_or_messages, version \\ :any_version)
+
+  def write(message_store, stream_name, messages, version)
+      when is_atom(message_store) and is_binary(stream_name) and is_list(messages) and
+             is_version(version) do
+    stream_name
+    |> message_store.append_to_stream(version, messages)
+    |> MessageStore.to_result(stream_name)
+  end
+
+  def write(message_store, stream_name, message, version)
+      when is_atom(message_store) and is_binary(stream_name) and is_map(message) and
+             is_version(version),
+      do: write(message_store, stream_name, [message], version)
 
   # Private
 
