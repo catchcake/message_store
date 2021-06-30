@@ -48,10 +48,10 @@ defmodule MessageStore.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:ex_doc, "~> 0.22", only: :dev},
-      {:credo, "~> 1.2", only: [:dev, :test]},
-      {:excoveralls, "~> 0.13", only: :test},
-      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
+      {:ex_doc, "~> 0.24", only: :dev},
+      {:credo, "~> 1.5", only: [:dev, :test]},
+      {:excoveralls, "~> 0.14", only: :test},
+      {:dialyxir, "~> 1.1", only: [:dev, :test], runtime: false},
       {:eventstore, "1.2.1"},
       {:jason, "~> 1.2"},
       {:result, "~> 1.6"},
