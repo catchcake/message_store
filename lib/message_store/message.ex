@@ -3,17 +3,46 @@ defmodule MessageStore.Message do
   A module for build, copy and folow message data.
   """
 
-  alias EventStore.EventData
+  alias EventStore.{EventData, RecordedEvent}
   alias ExMaybe, as: Maybe
+  alias MessageStore.MapExtra
 
-  @type message() :: EventData.t()
+  @type uuid() :: String.t()
+  @type message() :: %{
+          optional(:event_id) => uuid(),
+          required(:type) => String.t() | atom(),
+          required(:data) => map(),
+          required(:metadata) => map(),
+          optional(:causation_id) => uuid(),
+          optional(:correlation_id) => uuid()
+        }
+  @type event_message() :: EventData.t()
+  @type recorded_message() :: RecordedEvent.t()
   @type stream_name() :: String.t()
   @type version() :: EventStore.expected_version()
+  @type key() :: Map.key()
+  @type path() :: nonempty_list(key())
 
   defguard is_data_or_metadata(d) when d in [:data, :metadata]
   defguard is_version(version) when is_atom(version) or (is_integer(version) and version >= 0)
   defguard is_module_name(module) when is_atom(module) and module not in [nil, true, false]
 
+  @doc """
+  Create event data struct from message map.
+
+  ## Examples
+      iex> message = %{type: "Foo", data: %{foo: 1}, metadata: %{bar: 2}}
+      iex> Message.build(message)
+      %EventStore.EventData{
+        event_id: nil,
+        event_type: "Foo",
+        data: %{foo: 1},
+        metadata: %{bar: 2},
+        causation_id: nil,
+        correlation_id: nil
+      }
+  """
+  @spec build(message()) :: event_message()
   def build(message) when is_map(message) do
     %EventData{
       event_id: Map.get(message, :event_id),
@@ -25,12 +54,86 @@ defmodule MessageStore.Message do
     }
   end
 
+  @doc """
+  The copy function constructs a message from another message's data.
+
+  ## Examples
+      iex> recorded_message = %EventStore.RecordedEvent{
+      ...> causation_id: nil,
+      ...> correlation_id: "abcd1234",
+      ...> created_at: ~U[2021-07-15 12:15:07.379908Z],
+      ...> data: %{foo: "bazinga"},
+      ...> event_id: "b9fcdccd-a495-4df3-889a-4b38f35a2618",
+      ...> event_number: 935,
+      ...> event_type: "Test",
+      ...> metadata: %{bar: "baz", moo: 1},
+      ...> stream_uuid: "test-123",
+      ...> stream_version: 935
+      ...> }
+      iex> message = %{type: "Foo", data: %{}, metadata: %{}}
+      iex> Message.copy(message, recorded_message, [:data, [:metadata, :bar]])
+      %EventStore.EventData{
+        event_id: nil,
+        event_type: "Foo",
+        data: %{foo: "bazinga"},
+        metadata: %{bar: "baz"},
+        causation_id: nil,
+        correlation_id: nil
+      }
+
+  <div style="background-color: rgba(255,229,100,.3); border-color: #e7c000; color: #6b5900; padding: .1rem 1.5rem; border-left-width: .5rem; border-left-style: solid; margin: 1rem 0;">
+    <h2>Warning</h2>
+
+    <p>Copying the metadata should be used with extreme caution, and has no practical use in everyday applicative logic.
+    Except for certain testing and infrastructural scenarios,
+    copying the identifying metadata from one message to another can result in significant malfunctions
+    if the copied message is then written to a stream and processed.</p>
+  </div>
+  """
+  @spec copy(message(), recorded_message(), [path() | key()]) :: event_message()
   def copy(message, recorded_message, copy_list) do
     copy_list
     |> Enum.map(&get_data_from(&1, recorded_message))
     |> Enum.reduce(build(message), &update_message(&1, &2))
   end
 
+  @doc """
+  Constructing a message from a preceding message.
+
+  Following a message has almost identical behavior to a message `copy/3` method.
+  The follow message leverages the implementation of `copy/3` to fulfill its purpose.
+
+  ## Message Workflows
+
+  Messages frequently represent subsequent steps or stages in a process.
+  Subsequent messages follow after preceding messages.
+  Selected data or metadata from the preceding message is copied to the subsequent messages.
+
+  ## Examples
+      iex> recorded_message = %EventStore.RecordedEvent{
+      ...> causation_id: nil,
+      ...> correlation_id: "abcd1234",
+      ...> created_at: ~U[2021-07-15 12:15:07.379908Z],
+      ...> data: %{foo: "bazinga"},
+      ...> event_id: "b9fcdccd-a495-4df3-889a-4b38f35a2618",
+      ...> event_number: 935,
+      ...> event_type: "Test",
+      ...> metadata: %{bar: "baz", moo: 1},
+      ...> stream_uuid: "test-123",
+      ...> stream_version: 935
+      ...> }
+      iex> message = %{type: "Foo", data: %{}, metadata: %{}}
+      iex> Message.follow(message, recorded_message, [:data, [:metadata, :bar]])
+      %EventStore.EventData{
+        event_id: nil,
+        event_type: "Foo",
+        data: %{foo: "bazinga"},
+        metadata: %{bar: "baz"},
+        causation_id: "b9fcdccd-a495-4df3-889a-4b38f35a2618",
+        correlation_id: "abcd1234"
+      }
+  """
+  @spec follow(message(), recorded_message(), [path() | key()]) :: event_message()
   def follow(message, recorded_message, copy_list)
       when is_map(message) and is_map(recorded_message) and is_list(copy_list) do
     message
@@ -50,7 +153,7 @@ defmodule MessageStore.Message do
     |> List.last()
   end
 
-  @spec write(module(), stream_name(), message() | [message()], version()) ::
+  @spec write(module(), stream_name(), event_message() | [event_message()], version()) ::
           Result.t(any(), any())
   def write(message_store, stream_name, message_or_messages, version \\ :any_version)
 
@@ -69,22 +172,15 @@ defmodule MessageStore.Message do
 
   # Private
 
-  defp get_data_from(key, map) when is_atom(key) and is_map(map) do
-    {key, Map.get(map, key)}
+  defp get_data_from(path, map) when is_list(path) and is_map(map) do
+    {path, MapExtra.fetch_in!(map, path)}
   end
 
-  defp get_data_from({domd, keys}, map)
-       when is_data_or_metadata(domd) and is_map(map) and is_list(keys) do
-    {domd, Map.get(map, domd) |> Map.take(keys)}
+  defp get_data_from(key, map) when is_map_key(map, key) do
+    get_data_from([key], map)
   end
 
-  defp update_message({key, map}, message) when is_data_or_metadata(key) and is_map(map) do
-    updated_message_domd = Map.merge(message[key], map)
-
-    Map.put(message, key, updated_message_domd)
-  end
-
-  defp update_message({key, data}, message) when is_atom(key) do
-    Map.put(message, key, data)
+  defp update_message({path, value}, message) when is_list(path) and is_map(message) do
+    put_in(message, path, value)
   end
 end

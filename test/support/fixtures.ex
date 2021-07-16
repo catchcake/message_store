@@ -25,8 +25,8 @@ defmodule MessageStore.Fixtures do
   def message(opts \\ []) do
     %{
       type: Keyword.get(opts, :type, "RunTest"),
-      data: Keyword.get(opts, :data, %{id: 1, foo: "bar"}),
-      metadata: Keyword.get(opts, :metadata, %{baz: 1, bar: 2})
+      data: Keyword.get(opts, :data, %{}),
+      metadata: Keyword.get(opts, :metadata, %{})
     }
     |> put_if_exists(:correlation_id, Keyword.get(opts, :correlation_id, nil))
     |> put_if_exists(:causation_id, Keyword.get(opts, :causation_id, nil))

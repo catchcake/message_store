@@ -3,6 +3,8 @@ defmodule MessageTest do
 
   alias MessageStore.{Fixtures, Message}
 
+  doctest MessageStore.Message
+
   defmodule FakeMessageStore do
     @moduledoc false
 
@@ -58,7 +60,7 @@ defmodule MessageTest do
     end
   end
 
-  test "should create event message with type as string" do
+  test "build/1 - should create event message with type as string" do
     message = Fixtures.message()
 
     event_data = Message.build(message)
@@ -70,7 +72,7 @@ defmodule MessageTest do
     assert is_nil(event_data.causation_id)
   end
 
-  test "should create event message with type as atom" do
+  test "build/1 - should create event message with type as atom" do
     message = Fixtures.message(type: FakeCommand)
 
     event_data = Message.build(message)
@@ -82,7 +84,7 @@ defmodule MessageTest do
     assert is_nil(event_data.causation_id)
   end
 
-  test "should create event with causation_id and correlation_id" do
+  test "build/1 - should create event with causation_id and correlation_id" do
     message = Fixtures.message(correlation_id: "test-1234", causation_id: "test-3490")
 
     event_data = Message.build(message)
@@ -94,7 +96,7 @@ defmodule MessageTest do
     assert event_data.causation_id == message.causation_id
   end
 
-  test "should not copy any data from recorded event to source event" do
+  test "copy/3 - should not copy any data from recorded event to source event" do
     recorded_event = Fixtures.recorded_event(event_type: "Test", stream_uuid: "test-123")
     message = Fixtures.message()
 
@@ -105,48 +107,48 @@ defmodule MessageTest do
     assert event_data.metadata == message.metadata
   end
 
-  test "should copy all metadata from recorded event to source event" do
-    data = {:data, [:foo]}
-    metadata = :metadata
+  test "copy/3 - should copy all metadata from recorded event to source event" do
+    copy_list = [[:data, :foo], :metadata]
 
     recorded_event =
       Fixtures.recorded_event(
         event_type: "Test",
         stream_uuid: "test-123",
+        data: %{foo: 1, bar: 2},
         metadata: %{baz: "bar"}
       )
 
     message = Fixtures.message()
 
-    event_data = Message.copy(message, recorded_event, [metadata, data])
+    event_data = Message.copy(message, recorded_event, copy_list)
 
     assert event_data.event_type == message.type
-    assert event_data.data == expected_result(message, recorded_event, data)
-    assert event_data.metadata == expected_result(message, recorded_event, metadata)
+    assert event_data.data == %{foo: 1}
+    assert event_data.metadata == recorded_event.metadata
   end
 
-  test "should copy some metadata from recorded event to source event" do
-    data = {:data, [:foo]}
-    metadata = {:metadata, [:boo]}
+  test "copy/3 - should copy some metadata from recorded event to source event" do
+    copy_list = [:correlation_id, [:data, :foo], [:metadata, :boo]]
 
     recorded_event =
       Fixtures.recorded_event(
         event_type: "Test",
         stream_uuid: "test-123",
+        data: %{foo: 1, bar: 2},
         metadata: %{bar: "baz", boo: "bam"}
       )
 
     message = Fixtures.message()
 
-    event_data = Message.copy(message, recorded_event, [:correlation_id, metadata, data])
+    event_data = Message.copy(message, recorded_event, copy_list)
 
     assert event_data.event_type == message.type
-    assert event_data.data == expected_result(message, recorded_event, data)
-    assert event_data.metadata == expected_result(message, recorded_event, metadata)
+    assert event_data.data == %{foo: 1}
+    assert event_data.metadata == %{boo: "bam"}
     assert event_data.correlation_id == recorded_event.correlation_id
   end
 
-  test "should not follow any data from recorded event to source event" do
+  test "follow/3 - should not follow any data from recorded event to source event" do
     recorded_event =
       Fixtures.recorded_event(
         correlation_id: "abcd1234",
@@ -165,53 +167,53 @@ defmodule MessageTest do
     assert event_data.causation_id == recorded_event.event_id
   end
 
-  test "should follow all metadata from recorded event to source event" do
-    data = {:data, [:foo]}
-    metadata = :metadata
+  test "follow/3 - should follow all metadata from recorded event to source event" do
+    copy_list = [[:data, :foo], :metadata]
 
     recorded_event =
       Fixtures.recorded_event(
         event_type: "Test",
         correlation_id: "09345",
         stream_uuid: "test-123",
+        data: %{foo: 1, bar: 2},
         metadata: %{bar: "baz", boo: "bam"}
       )
 
     message = Fixtures.message()
 
-    event_data = Message.follow(message, recorded_event, [metadata, data])
+    event_data = Message.follow(message, recorded_event, copy_list)
 
     assert event_data.event_type == message.type
-    assert event_data.data == expected_result(message, recorded_event, data)
-    assert event_data.metadata == expected_result(message, recorded_event, metadata)
+    assert event_data.data == %{foo: 1}
+    assert event_data.metadata == recorded_event.metadata
     assert event_data.correlation_id == recorded_event.correlation_id
     assert event_data.causation_id == recorded_event.event_id
   end
 
-  test "should follow some metadata from recorded event to source event" do
-    data = {:data, [:foo]}
-    metadata = {:metadata, [:boo]}
+  test "follow/3 - should follow some metadata from recorded event to source event" do
+    copy_list = [[:data, :foo], [:metadata, :boo]]
 
     recorded_event =
       Fixtures.recorded_event(
         correlation_id: "12345",
         stream_uuid: "test-123",
         event_type: "Test",
+        data: %{foo: 1, bar: 2},
         metadata: %{bar: "baz", boo: "bam"}
       )
 
     message = Fixtures.message()
 
-    event_data = Message.follow(message, recorded_event, [metadata, data])
+    event_data = Message.follow(message, recorded_event, copy_list)
 
     assert event_data.event_type == message.type
-    assert event_data.data == expected_result(message, recorded_event, data)
-    assert event_data.metadata == expected_result(message, recorded_event, metadata)
+    assert event_data.data == %{foo: 1}
+    assert event_data.metadata == %{boo: "bam"}
     assert event_data.correlation_id == recorded_event.correlation_id
     assert event_data.causation_id == recorded_event.event_id
   end
 
-  test "should set correlation_id to event_id when source event is root event" do
+  test "follow/3 - should set correlation_id to event_id when source event is root event" do
     message = Fixtures.message()
     recorded_event = Fixtures.recorded_event(event_type: "Test", stream_uuid: "test-123")
 
@@ -225,14 +227,4 @@ defmodule MessageTest do
   end
 
   # Private
-
-  defp expected_result(message, recorded_event, {payload, payload_keys}) do
-    re_payload = Map.take(recorded_event[payload], payload_keys)
-
-    Map.merge(message[payload], re_payload)
-  end
-
-  defp expected_result(message, recorded_event, payload) when payload in [:data, :metadata] do
-    Map.merge(message[payload], recorded_event[payload])
-  end
 end
