@@ -98,13 +98,12 @@ defmodule MessageTest do
 
   test "copy/3 - should not copy any data from recorded event to source event" do
     recorded_event = Fixtures.recorded_event(event_type: "Test", stream_uuid: "test-123")
-    message = Fixtures.message()
 
-    event_data = Message.copy(message, recorded_event, [])
+    event_data = Message.copy("Foo", recorded_event, [])
 
-    assert event_data.event_type == message.type
-    assert event_data.data == message.data
-    assert event_data.metadata == message.metadata
+    assert event_data.event_type == "Foo"
+    assert event_data.data == %{}
+    assert event_data.metadata == %{}
   end
 
   test "copy/3 - should copy all metadata from recorded event to source event" do
@@ -118,11 +117,9 @@ defmodule MessageTest do
         metadata: %{baz: "bar"}
       )
 
-    message = Fixtures.message()
+    event_data = Message.copy("Foo", recorded_event, copy_list)
 
-    event_data = Message.copy(message, recorded_event, copy_list)
-
-    assert event_data.event_type == message.type
+    assert event_data.event_type == "Foo"
     assert event_data.data == %{foo: 1}
     assert event_data.metadata == recorded_event.metadata
   end
@@ -138,11 +135,9 @@ defmodule MessageTest do
         metadata: %{bar: "baz", boo: "bam"}
       )
 
-    message = Fixtures.message()
+    event_data = Message.copy("Foo", recorded_event, copy_list)
 
-    event_data = Message.copy(message, recorded_event, copy_list)
-
-    assert event_data.event_type == message.type
+    assert event_data.event_type == "Foo"
     assert event_data.data == %{foo: 1}
     assert event_data.metadata == %{boo: "bam"}
     assert event_data.correlation_id == recorded_event.correlation_id
@@ -156,13 +151,11 @@ defmodule MessageTest do
         stream_uuid: "test-123"
       )
 
-    message = Fixtures.message()
+    event_data = Message.follow("Foo", recorded_event, [])
 
-    event_data = Message.follow(message, recorded_event, [])
-
-    assert event_data.event_type == message.type
-    assert event_data.data == message.data
-    assert event_data.metadata == message.metadata
+    assert event_data.event_type == "Foo"
+    assert event_data.data == %{}
+    assert event_data.metadata == %{}
     assert event_data.correlation_id == recorded_event.correlation_id
     assert event_data.causation_id == recorded_event.event_id
   end
@@ -179,11 +172,9 @@ defmodule MessageTest do
         metadata: %{bar: "baz", boo: "bam"}
       )
 
-    message = Fixtures.message()
+    event_data = Message.follow("Foo", recorded_event, copy_list)
 
-    event_data = Message.follow(message, recorded_event, copy_list)
-
-    assert event_data.event_type == message.type
+    assert event_data.event_type == "Foo"
     assert event_data.data == %{foo: 1}
     assert event_data.metadata == recorded_event.metadata
     assert event_data.correlation_id == recorded_event.correlation_id
@@ -202,11 +193,9 @@ defmodule MessageTest do
         metadata: %{bar: "baz", boo: "bam"}
       )
 
-    message = Fixtures.message()
+    event_data = Message.follow("Foo", recorded_event, copy_list)
 
-    event_data = Message.follow(message, recorded_event, copy_list)
-
-    assert event_data.event_type == message.type
+    assert event_data.event_type == "Foo"
     assert event_data.data == %{foo: 1}
     assert event_data.metadata == %{boo: "bam"}
     assert event_data.correlation_id == recorded_event.correlation_id
@@ -214,13 +203,12 @@ defmodule MessageTest do
   end
 
   test "follow/3 - should set correlation_id to event_id when source event is root event" do
-    message = Fixtures.message()
     recorded_event = Fixtures.recorded_event(event_type: "Test", stream_uuid: "test-123")
 
     assert is_nil(recorded_event.correlation_id)
     assert is_nil(recorded_event.causation_id)
 
-    event = Message.follow(message, recorded_event, [])
+    event = Message.follow("Foo", recorded_event, [])
 
     assert event.correlation_id == recorded_event.event_id
     assert event.causation_id == recorded_event.event_id

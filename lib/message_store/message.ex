@@ -8,9 +8,10 @@ defmodule MessageStore.Message do
   alias MessageStore.MapExtra
 
   @type uuid() :: String.t()
+  @type message_type :: String.t() | atom()
   @type message() :: %{
           optional(:event_id) => uuid(),
-          required(:type) => String.t() | atom(),
+          required(:type) => message_type(),
           required(:data) => map(),
           required(:metadata) => map(),
           optional(:causation_id) => uuid(),
@@ -26,6 +27,7 @@ defmodule MessageStore.Message do
   defguard is_data_or_metadata(d) when d in [:data, :metadata]
   defguard is_version(version) when is_atom(version) or (is_integer(version) and version >= 0)
   defguard is_module_name(module) when is_atom(module) and module not in [nil, true, false]
+  defguard is_message_type(type) when is_atom(type) or is_binary(type)
 
   @doc """
   Create event data struct from message map.
@@ -70,8 +72,7 @@ defmodule MessageStore.Message do
       ...> stream_uuid: "test-123",
       ...> stream_version: 935
       ...> }
-      iex> message = %{type: "Foo", data: %{}, metadata: %{}}
-      iex> Message.copy(message, recorded_message, [:data, [:metadata, :bar]])
+      iex> Message.copy("Foo", recorded_message, [:data, [:metadata, :bar]])
       %EventStore.EventData{
         event_id: nil,
         event_type: "Foo",
@@ -90,11 +91,12 @@ defmodule MessageStore.Message do
     if the copied message is then written to a stream and processed.</p>
   </div>
   """
-  @spec copy(message(), recorded_message(), [path() | key()]) :: event_message()
-  def copy(message, recorded_message, copy_list) do
+  @spec copy(message_type(), recorded_message(), [path() | key()]) :: event_message()
+  def copy(type, recorded_message, copy_list)
+      when is_message_type(type) and is_map(recorded_message) and is_list(copy_list) do
     copy_list
     |> Enum.map(&get_data_from(&1, recorded_message))
-    |> Enum.reduce(build(message), &update_message(&1, &2))
+    |> Enum.reduce(type |> new() |> build(), &update_message(&1, &2))
   end
 
   @doc """
@@ -122,8 +124,7 @@ defmodule MessageStore.Message do
       ...> stream_uuid: "test-123",
       ...> stream_version: 935
       ...> }
-      iex> message = %{type: "Foo", data: %{}, metadata: %{}}
-      iex> Message.follow(message, recorded_message, [:data, [:metadata, :bar]])
+      iex> Message.follow("Foo", recorded_message, [:data, [:metadata, :bar]])
       %EventStore.EventData{
         event_id: nil,
         event_type: "Foo",
@@ -133,10 +134,10 @@ defmodule MessageStore.Message do
         correlation_id: "abcd1234"
       }
   """
-  @spec follow(message(), recorded_message(), [path() | key()]) :: event_message()
-  def follow(message, recorded_message, copy_list)
-      when is_map(message) and is_map(recorded_message) and is_list(copy_list) do
-    message
+  @spec follow(message_type(), recorded_message(), [path() | key()]) :: event_message()
+  def follow(type, recorded_message, copy_list)
+      when is_message_type(type) and is_map(recorded_message) and is_list(copy_list) do
+    type
     |> copy(recorded_message, copy_list)
     |> Map.put(
       :correlation_id,
@@ -182,5 +183,13 @@ defmodule MessageStore.Message do
 
   defp update_message({path, value}, message) when is_list(path) and is_map(message) do
     put_in(message, path, value)
+  end
+
+  defp new(type) do
+    %{
+      type: type,
+      data: %{},
+      metadata: %{}
+    }
   end
 end
