@@ -26,9 +26,19 @@ message_store-*.tar
 /priv/plts/*.plt
 /priv/plts/*.plt.hash
 
+# Temporary files for e.g. tests
+/tmp
+
 .envs
+.env/
 .vimrc
+.projections.json
+.vscode/
+
+.elixir_ls/
 
 tags
-.projections.json
-.elixir_ls/
+tags.*
+*.tags
+
+.DS_Store
