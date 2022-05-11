@@ -1,0 +1,42 @@
+version: '3'
+services:
+  development:
+    depends_on:
+      - database
+    image: messagestore-development
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./tmp/erlang-history:/root/.cache/erlang-history
+      - ./bin:/usr/src/app/bin
+      - ./config:/usr/src/app/config
+      - ./lib:/usr/src/app/lib
+      - ./priv:/usr/src/app/priv
+      - ./mix.exs:/usr/src/app/mix.exs
+      - ./mix.lock:/usr/src/app/mix.lock
+      - ./test:/usr/src/app/test
+      - elixir_build:/usr/src/app/_build
+      - elixir_deps:/usr/src/app/deps
+      - elixir_dialyzer:/usr/src/app/priv/plts
+    environment:
+      EVENTSTORE_URL: ${EVENTSTORE_URL}
+      ERL_AFLAGS: -kernel shell_history enabled
+
+  database:
+    image: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - ./bin/docker-entrypoint-initdb.d:/docker-entrypoint-initdb.d
+      - ./tmp/.psqlrc:/root/.psqlrc
+      - ./tmp/.psql_history:/root/.psql_history
+      - db_data:/var/lib/postgresql/data
+
+volumes:
+  db_data:
+  elixir_build:
+  elixir_deps:
+  elixir_dialyzer:
