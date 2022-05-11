@@ -1,8 +1,6 @@
 use Mix.Config
 
-eventstore_url =
-  System.get_env("EVENTSTORE_URL") ||
-    raise("A EVENTSTORE_URL environment variable must be set!!!")
+eventstore_url = "#{System.fetch_env!("EVENTSTORE_URL")}_test"
 
 config(:message_store, TestMessageStore,
   url: eventstore_url,
