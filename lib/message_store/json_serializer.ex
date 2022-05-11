@@ -17,7 +17,15 @@ if Code.ensure_loaded?(Jason) do
     Deserialize given JSON binary data to the expected type.
     """
     def deserialize(binary, _config) do
-      Jason.decode!(binary, keys: :atoms)
+      keys_setting = get_keys_setting()
+
+      Jason.decode!(binary, keys: keys_setting)
+    end
+
+    defp get_keys_setting() do
+      :message_store
+      |> Application.get_env(__MODULE__, [])
+      |> Keyword.get(:keys, :atoms!)
     end
   end
 end
