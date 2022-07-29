@@ -1,4 +1,4 @@
-FROM elixir:1.12
+FROM elixir:1.13
 
 LABEL maintainer="smitka.j@gmail.com"
 
